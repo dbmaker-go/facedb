@@ -1,7 +1,11 @@
 
 #include <string.h>
 #include "cannoy.h"
+#include "libudf.h"
 
+/**************************************
+ * build annoy index
+ **************************************/
 $ create procedure annoy_create(
 	char(128) tbname INPUT, 
 	char(128) idxname INPUT,
@@ -45,15 +49,15 @@ $ create procedure annoy_create(
         	break;
         }
 
-        memcpy(vec, cval, dimession*sizeof(double));
-        
-        AnnoyAddItem(idx1, id, vec);
-        
-        vecoid[0] = rid;
+		memcpy(vec, cval, dimession*sizeof(double));
 
-        AnnoyAddItem(idx2, id, vecoid);
-        id++;
-   }
+		AnnoyAddItem(idx1, id, vec);
+
+		vecoid[0] = rid;
+
+		AnnoyAddItem(idx2, id, vecoid);
+		id++;
+	}
    
    $close cur1;
    nitem = id;
@@ -72,5 +76,28 @@ $ create procedure annoy_create(
    
    $ returns status SQLCODE;
    $ end code section;
+}
+
+/*
+CREATE FUNCTION ANNOY_CREATESYSADM.LOADSP_CREATE() RETURNS int;
+	IN:  dummy
+	RET: dummy
+	
+this udf is only for loading sp library when starting db.
+*/
+#ifdef DB_PCWIN
+__declspec(dllexport)
+#endif
+int  LOADSP_CREATE(int nArg, VAL args[])
+{
+	VAL ret;
+
+	ret.u.ival = 0;
+	ret.len = sizeof(int);
+	ret.type = INT_TYP;
+
+exit:
+	
+	return _RetVal(args, ret);
 }
 

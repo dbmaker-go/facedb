@@ -6,6 +6,12 @@
 #include <stdio.h>
 #include <time.h>
 
+#ifdef DEBUG
+# define TRACE printf
+#else
+# define TRACE
+#endif
+
 int  GETFACEVECTOR(int nArg, VAL args[]);
 int  GETFACEVECTOR2(int nArg, VAL args[]);
 
@@ -18,10 +24,10 @@ int  GETFACEVECTOR2(int nArg, VAL args[]);
 __declspec(dllexport)
 #endif
 void gcCloseDface(void *h, size_t dlen){
-	printf("gc close dface begin: %p, %d\n",h, dlen);
+	TRACE("gc close dface begin: %p, %d\n",h, dlen);
 	dface dh = (dface)(*(void **)h);
 	CloseDface(dh);
-	printf("gc close dface end: %x\n", dh);
+	TRACE("gc close dface end: %x\n", dh);
 }
 
 static dface getDfaceHanle(VAL args[]){
@@ -32,29 +38,29 @@ static dface getDfaceHanle(VAL args[]){
 	
 	if (rc = udfGetCobj(args, cvdface, &dh, sizeof(dh))){
 		dh = NULL;
-		printf("get dface handle from cv fail: %d\n", rc);
+		TRACE("get dface handle from cv fail: %d\n", rc);
 	} else {
-		printf("get dface handle from cv OK: %x\n", dh);
+		TRACE("get dface handle from cv OK: %x\n", dh);
 		return dh;
 	}
 	
 
 	t1 = time(0);
 	if (rc = OpenDface(&dh, faceshape)) {
-		printf("open dface engine error: %d\n", rc);
+		TRACE("open dface engine error: %d\n", rc);
 		return NULL;
 	}
 	t2 = time(0);
-	printf("open dface cost %f seconds\n", difftime(t2,t1));
+	TRACE("open dface cost %f seconds\n", difftime(t2,t1));
 	
 	if (rc = udfSetCobj(args, cvdface, &dh, sizeof(dh), NULL)){
-		printf("save dface handle into cv error. %d\n", rc);
+		TRACE("save dface handle into cv error. %d\n", rc);
 		CloseDface(dh);
 		return NULL;
 	} else {
-		printf("save dface handle into cv ok: %x\n", dh);
+		TRACE("save dface handle into cv ok: %x\n", dh);
 		udfSetCobjGcfName(args, cvdface, "dfaceudf", "gcCloseDface");
-		printf("register dface gc func: dfaceudf.gcCloseDface\n");
+		TRACE("register dface gc func: dfaceudf.gcCloseDface\n");
 	}
 	
 	return dh;
@@ -87,11 +93,11 @@ static void jvec2dvec(char *json, int dimension, double *vec){
 	char *p;
 	
 	if (json[0] == '\0'){
-		printf("invalid json: empty\n");
+		TRACE("invalid json: empty\n");
 		return;
 	}
 	if (json[0] != '['){
-		printf("invalid json: %s\n", json);
+		TRACE("invalid json: %s\n", json);
 		return;
 	} else {
 		json++;
@@ -128,23 +134,23 @@ int  GETFACEVECTOR(int nArg, VAL args[])
 	len = strlen(imgfn);
 	for (i=len-1; i>0 && imgfn[i]==' '; i--)
 		imgfn[i] = '\0';
-	printf("args[0].len = %d\n", args[0].len);
-	printf("img:(%d):%s\n", strlen(imgfn), imgfn);
+	TRACE("args[0].len = %d\n", args[0].len);
+	TRACE("img:(%d):%s\n", strlen(imgfn), imgfn);
 	
 	if ((dh = getDfaceHanle(args)) == NULL){
-		printf("get dface handle fail.\n");
+		TRACE("get dface handle fail.\n");
 		rc = ERR_UDF;
 		goto exit;
 	}
 	
 	t1 = time(0);
 	if (rc = GetFaceVector(dh, imgfn, &fvec)) {
-		printf("get face vector error: %d\n", rc);
+		TRACE("get face vector error: %d\n", rc);
 		rc = ERR_UDF;
 		goto exit;
 	}
 	t2 = time(0);
-	printf("get face vector cost %f seconds\n", difftime(t2,t1));
+	TRACE("get face vector cost %f seconds\n", difftime(t2,t1));
 	
 	// return vector
 	if (rc = _UDFAllocMem(args, &dvec, sizeof(fvec)))
@@ -158,11 +164,11 @@ exit:
 	//if ((lrc = CloseDface(dh)) > rc)
 	//	rc = lrc;
 	if (rc){
-		printf("getfacevector error: %d\n", rc);
+		TRACE("getfacevector error: %d\n", rc);
 		return rc;
 	}
 	
-	printf("getfacevector end: return char %d\n", args[0].len);
+	TRACE("getfacevector end: return char %d\n", args[0].len);
 	fflush(stdout);
 	
 	return _RetVal(args, args[0]);
@@ -203,21 +209,21 @@ int  GETFACEVECTOR2(int nArg, VAL args[])
   i63   start;
   
   if (args[0].type == NULL_TYP){
-  	printf("NULL args\n");
+  	TRACE("NULL args\n");
     goto exit;
   }
   
-  printf("args[0].type = %x\n", args[0].type);
+  TRACE("args[0].type = %x\n", args[0].type);
 
   memcpy((char *)(&bbSrc), args[0].u.xval, BBID_SIZE); /* #005 */
   if (rc = _UDFBbSize(args, bbSrc, &szSrc)){
-  	printf("get bb size error: %d\n", rc);
+  	TRACE("get bb size error: %d\n", rc);
     goto exit;
   }
   length = szSrc;
   
   if (rc = _UDFBbOpen(args, bbSrc, &hSrc)){
-  	printf("open bb error: %d\n", rc);
+  	TRACE("open bb error: %d\n", rc);
   	rc = ERR_UDF;
     goto exit;
   }
@@ -266,23 +272,23 @@ int  GETFACEVECTOR2(int nArg, VAL args[])
 	len = strlen(imgfn);
 	for (i=len-1; i>0 && imgfn[i]==' '; i--)
 		imgfn[i] = '\0';
-	printf("args[0].len = %d\n", args[0].len);
-	printf("img:(%d):%s\n", strlen(imgfn), imgfn);
+	TRACE("args[0].len = %d\n", args[0].len);
+	TRACE("img:(%d):%s\n", strlen(imgfn), imgfn);
 	
 	if ((dh = getDfaceHanle(args)) == NULL){
-		printf("get dface handle fail.\n");
+		TRACE("get dface handle fail.\n");
 		rc = ERR_UDF;
 		goto exit;
 	}
 	
 	t1 = time(0);
 	if (rc = GetFaceVector(dh, imgfn, &fvec)) {
-		printf("get face vector error: %d\n", rc);
+		TRACE("get face vector error: %d\n", rc);
 		rc = ERR_UDF;
 		goto exit;
 	}
 	t2 = time(0);
-	printf("get face vector cost %f seconds\n", difftime(t2,t1));
+	TRACE("get face vector cost %f seconds\n", difftime(t2,t1));
 	
 	// return vector
 	if (rc = _UDFAllocMem(args, &dvec, sizeof(fvec)))
@@ -302,11 +308,11 @@ exit:
 	//if (dh && (lrc = CloseDface(dh)) > rc)
 	//	rc = lrc;
 	if (rc){
-		printf("getfacevector error: %d\n", rc);
+		TRACE("getfacevector error: %d\n", rc);
 		return rc;
 	}
 	
-	printf("getfacevector end: return %d bytes\n", args[0].len);
+	TRACE("getfacevector end: return %d bytes\n", args[0].len);
 	fflush(stdout);
 	
 	return _RetVal(args, args[0]);
@@ -333,24 +339,24 @@ int  GETFACEDIST(int nArg, VAL args[])
 	len = strlen(imgfn1);
 	for (i=len-1; i>0 && imgfn1[i]==' '; i--)
 		imgfn1[i] = '\0';
-	printf("args[0].len = %d\n", args[0].len);
-	printf("img1:(%d):%s\n", strlen(imgfn1), imgfn1);
+	TRACE("args[0].len = %d\n", args[0].len);
+	TRACE("img1:(%d):%s\n", strlen(imgfn1), imgfn1);
 	
 	strncpy(imgfn2, args[1].u.xval, args[1].len>255? 255:args[1].len);
 	len = strlen(imgfn2);
 	for (i=len-1; i>0 && imgfn2[i]==' '; i--)
 		imgfn2[i] = '\0';
-	printf("args[1].len = %d\n", args[1].len);
-	printf("img2:(%d):%s\n", strlen(imgfn2), imgfn2);
+	TRACE("args[1].len = %d\n", args[1].len);
+	TRACE("img2:(%d):%s\n", strlen(imgfn2), imgfn2);
 	
 	if ((dh = getDfaceHanle(args)) == NULL){
-		printf("get dface handle fail.\n");
+		TRACE("get dface handle fail.\n");
 		rc = ERR_UDF;
 		goto exit;
 	}
 	
 	if (rc = GetFaceDistance(dh, imgfn1, imgfn2, &dist)){
-		printf("getfacedistance error: %d\n", rc);
+		TRACE("getfacedistance error: %d\n", rc);
 		rc = ERR_UDF;
 		goto exit;
 	}
@@ -363,7 +369,7 @@ exit:
 	if (rc)
 		return rc;
 	
-	printf("getfacedistance end: return %.14f\n", args[0].u.fval);
+	TRACE("getfacedistance end: return %.14f\n", args[0].u.fval);
 	fflush(stdout);
 	
 	return _RetVal(args, args[0]);
@@ -390,25 +396,25 @@ int  GETFACEDIST2(int nArg, VAL args[])
 	len = strlen(imgfn1);
 	for (i=len-1; i>0 && imgfn1[i]==' '; i--)
 		imgfn1[i] = '\0';
-	printf("args[0].len = %d\n", args[0].len);
-	printf("img1:(%d):%s\n", strlen(imgfn1), imgfn1);
+	TRACE("args[0].len = %d\n", args[0].len);
+	TRACE("img1:(%d):%s\n", strlen(imgfn1), imgfn1);
 	
 	strncpy(imgfn2, args[1].u.xval, args[1].len>255? 255:args[1].len);
 	len = strlen(imgfn2);
 	for (i=len-1; i>0 && imgfn2[i]==' '; i--)
 		imgfn2[i] = '\0';
-	printf("args[1].len = %d\n", args[1].len);
-	printf("img2:(%d):%s\n", strlen(imgfn2), imgfn2);
+	TRACE("args[1].len = %d\n", args[1].len);
+	TRACE("img2:(%d):%s\n", strlen(imgfn2), imgfn2);
 	
 	// open dface engine
 	if (rc = OpenDface(&dh, faceshape)) {
-		printf("open dface engine error: %d\n", rc);
+		TRACE("open dface engine error: %d\n", rc);
 		rc = ERR_UDF;
 		goto exit;
 	}
 	
 	if (rc = GetFaceDistance(dh, imgfn1, imgfn2, &dist)){
-		printf("getfacedistance error: %d\n", rc);
+		TRACE("getfacedistance error: %d\n", rc);
 		rc = ERR_UDF;
 		goto exit;
 	}
@@ -424,7 +430,7 @@ exit:
 	if (rc)
 		return rc;
 	
-	printf("getfacedistance end: return %.14f\n", args[0].u.fval);
+	TRACE("getfacedistance end: return %.14f\n", args[0].u.fval);
 	fflush(stdout);
 	
 	return _RetVal(args, args[0]);

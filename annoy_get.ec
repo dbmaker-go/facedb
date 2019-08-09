@@ -1,17 +1,25 @@
 
 #include <string.h>
 #include "cannoy.h"
+#include "libudf.h"
 
+#ifdef DEBUG
+# define TRACE printf
+# define dumpvec _dumpvec
+#else
+# define TRACE
+# define dumpvec
+#endif
 
 int gcidx(void *h){
-	printf("gc annoy index begin: %p\n",h);
+	TRACE("gc annoy index begin: %p\n",h);
 	hannoy idx = (hannoy)h;
 	DestroyAnnoyIndex(idx);
-	printf("gc annoy index: %x\n", idx);
+	TRACE("gc annoy index: %x\n", idx);
 	return 0;
 }
 
-void dumpvec(char *caption, double vec[], int dimension){
+void _dumpvec(char *caption, double vec[], int dimension){
 	printf("=== dump vector: %s ===\n", caption);
 	for (int i=0; i<dimension; i++){
 		printf("%.15f, ", vec[i]);
@@ -40,9 +48,8 @@ $ create procedure annoy_get(
 	int i,j,k;
 	hannoy idx1, idx2;
 	int newIdx1 = 0, newIdx2 = 0;
-	int idary[16];
-	double disary[16];
-	
+	int *idary = 0;
+	double *disary = 0;
 	
    $ begin code section;
    
@@ -54,14 +61,14 @@ $ create procedure annoy_get(
    		idx1 = NewAnnoyIndexEuclidean(dimension);
    		AnnoyLoad(idx1, aidxname);
    		i = AnnoyGetNItems(idx1);
-   		printf("load %s ok: %d items\n", idxname, i);
+   		TRACE("load %s ok: %d items\n", idxname, i);
    		
    		utcv_set(hdbc, aidxname, (void *)idx1, gcidx, NULL);
-   		printf("save idx1 handle into cv: %x\n", idx1);
+   		TRACE("save idx1 handle into cv: %x\n", idx1);
 	} else {
-		printf("get idx1 handle from cv: %x\n", idx1);
+		TRACE("get idx1 handle from cv: %x\n", idx1);
    		i = AnnoyGetNItems(idx1);
-   		printf("idx1 has %d items\n", i);
+   		TRACE("idx1 has %d items\n", i);
 	}
    
 	sprintf(aidxname, "%s_%s_oid.tree", tbname, idxname);
@@ -69,32 +76,40 @@ $ create procedure annoy_get(
    		idx2 = NewAnnoyIndexEuclidean(2);
    		AnnoyLoad(idx2, aidxname);
    		i = AnnoyGetNItems(idx2);
-   		printf("load %s_oid ok: %d items\n", idxname, i);
+   		TRACE("load %s_oid ok: %d items\n", idxname, i);
    		
    		utcv_set(hdbc, aidxname, (void *)idx2, gcidx, NULL);
-   		printf("save idx2 handle into cv: %x\n", idx2);
+   		TRACE("save idx2 handle into cv: %x\n", idx2);
 	} else {
-		printf("get idx2 handle from cv: %x\n", idx2);
+		TRACE("get idx2 handle from cv: %x\n", idx2);
    		i = AnnoyGetNItems(idx2);
-   		printf("idx2 has %d items\n", i);
+   		TRACE("idx2 has %d items\n", i);
 	}
 
-	if (nItem > 16)
-		nItem = 16;
-	for (i=0; i<16; i++)
+	idary = (int *)malloc(nItem * sizeof(int));
+	if (idary == 0) {
+		SQLCODE = -1;
+		goto errexit;
+	}
+	for (i=0; i<nItem; i++)
 		idary[i] = -1;
+	disary = (double *)malloc(nItem * sizeof(double));
+	if (disary == 0) {
+		SQLCODE = -1;
+		goto errexit;
+	}
 	
 	//char_to_vec(jvec, dimension, vec);
-	printf("annoy_get args ivec: type=%d, ind=%d, len=%d, xval=%p, val[0]=%.15f\n", 
+	TRACE("annoy_get args ivec: type=%d, ind=%d, len=%d, xval=%p, val[0]=%.15f\n", 
 		args[3].type, args[3].ind, args[3].len, args[3].u.xval, *((double*)ivec));
-	printf("  dimension=%d, nItem=%d\n", dimension, nItem);
+	TRACE("  dimension=%d, nItem=%d\n", dimension, nItem);
 	memcpy(vec, ivec, dimension*sizeof(double));
 	dumpvec("received:", vec, 128);
 	AnnoyGetNnsByVector(idx1, vec, nItem, idary, disary);
 	for (i=0; i<nItem; i++){
 		if (idary[i] < 0)
 			break;
-		printf("get nns by vector: %d, %f\n", idary[i], disary[i]);
+		TRACE("get nns by vector: %d, %f\n", idary[i], disary[i]);
 	}
 	
 	
@@ -109,15 +124,41 @@ $ create procedure annoy_get(
 		rid = (long)vecoid[0];
 		dist = disary[i];
 		$ insert into tmprid values(:rid, :dist);
-		printf("insert id: %ld, %f\n", rid, dist);
+		TRACE("insert id: %ld, %f\n", rid, dist);
 	}
      
 	//DestroyAnnoyIndex(idx1);
 	//DestroyAnnoyIndex(idx2);
    
    $ returns select rid,distance from tmprid into :orid,:odist;
+
+errexit:
    
    $ returns status SQLCODE;
    $ end code section;
+}
+
+
+/*
+CREATE FUNCTION ANNOY_CREATESYSADM.LOADSP_GET() RETURNS int;
+	IN:  dummy
+	RET: dummy
+	
+this udf is only for loading sp library when starting db.
+*/
+#ifdef DB_PCWIN
+__declspec(dllexport)
+#endif
+int  LOADSP_GET(int nArg, VAL args[])
+{
+	VAL ret;
+
+	ret.u.ival = 0;
+	ret.len = sizeof(int);
+	ret.type = INT_TYP;
+
+exit:
+	
+	return _RetVal(args, ret);
 }
 
