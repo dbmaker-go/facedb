@@ -9,6 +9,12 @@
 # define TRACE
 #endif
 
+#if defined(WIN32) || defined(_WIN64)
+# define PATHSEP '\\'
+#else
+# define PATHSEP '/'
+#endif
+
 static void dvec2jvec(double dvec[], int nvec, char *obuf)
 {
 	int i, pos;
@@ -46,6 +52,9 @@ $ create procedure annoy_getall(
 	$ begin declare section;
 		bigint rid;
 		char jvec[4000];
+		int jveclen;
+		char dbdir[1024];
+		int dbdirlen;
 	$ end declare section;
 	
 	char aidxname[256];
@@ -57,12 +66,16 @@ $ create procedure annoy_getall(
 	int nItem = 0;
 	
 	
-   $ begin code section;
+	$ begin code section;
    
-   if (dimension > 256)
-   	 dimension = 256;
+	if (dimension > 256)
+		dimension = 256;
    
-   sprintf(aidxname, "%s_%s.tree", tbname, idxname);
+	$ select VALUE, LENGTH(VALUE) from SYSCONFIG where KEYWORD='DB_DBDIR' into :dbdir, :dbdirlen;
+   
+	dbdir[dbdirlen] = 0;
+	
+	sprintf(aidxname, "%s%c%s_%s.tree", dbdir, PATHSEP, tbname, idxname);
 	if ((idx1 = (hannoy)utcv_get(hdbc, aidxname)) == NULL){
    		idx1 = NewAnnoyIndexEuclidean(dimension);
    		AnnoyLoad(idx1, aidxname);
@@ -77,7 +90,7 @@ $ create procedure annoy_getall(
    		TRACE("idx1 has %d items\n", i);
 	}
    
-	sprintf(aidxname, "%s_%s_oid.tree", tbname, idxname);
+	sprintf(aidxname, "%s%c%s_%s_oid.tree", dbdir, PATHSEP, tbname, idxname);
 	if ((idx2 = (hannoy)utcv_get(hdbc, aidxname)) == NULL){
    		idx2 = NewAnnoyIndexEuclidean(2);
    		AnnoyLoad(idx2, aidxname);
@@ -103,7 +116,8 @@ $ create procedure annoy_getall(
 
 		rid = (long)vecoid[0];
 		dvec2jvec(vec,128,jvec);
-		$ insert into tmpvec values(:rid, :jvec);
+		jveclen = strlen(jvec);
+		$ insert into tmpvec values(:rid, :jvec :jveclen);
 	}
      
 	//DestroyAnnoyIndex(idx1);

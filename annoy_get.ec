@@ -11,6 +11,12 @@
 # define dumpvec
 #endif
 
+#if defined(WIN32) || defined(_WIN64)
+# define PATHSEP '\\'
+#else
+# define PATHSEP '/'
+#endif
+
 int gcidx(void *h){
 	TRACE("gc annoy index begin: %p\n",h);
 	hannoy idx = (hannoy)h;
@@ -39,6 +45,8 @@ $ create procedure annoy_get(
 	$ begin declare section;
 		bigint rid;
 		double dist;
+		char dbdir[1024];
+		int dbdirlen;
 	$ end declare section;
 	
 	char aidxname[256];
@@ -55,8 +63,12 @@ $ create procedure annoy_get(
    
 	if (dimension > 256)
 		dimension = 256;
+		
+	$ select VALUE, LENGTH(VALUE) from SYSCONFIG where KEYWORD='DB_DBDIR' into :dbdir, :dbdirlen;
    
-	sprintf(aidxname, "%s_%s.tree", tbname, idxname);
+	dbdir[dbdirlen] = 0;
+
+	sprintf(aidxname, "%s%c%s_%s.tree", dbdir, PATHSEP, tbname, idxname);
 	if ((idx1 = (hannoy)utcv_get(hdbc, aidxname)) == NULL){
    		idx1 = NewAnnoyIndexEuclidean(dimension);
    		AnnoyLoad(idx1, aidxname);
@@ -71,7 +83,7 @@ $ create procedure annoy_get(
    		TRACE("idx1 has %d items\n", i);
 	}
    
-	sprintf(aidxname, "%s_%s_oid.tree", tbname, idxname);
+	sprintf(aidxname, "%s%c%s_%s_oid.tree", dbdir, PATHSEP, tbname, idxname);
 	if ((idx2 = (hannoy)utcv_get(hdbc, aidxname)) == NULL){
    		idx2 = NewAnnoyIndexEuclidean(2);
    		AnnoyLoad(idx2, aidxname);

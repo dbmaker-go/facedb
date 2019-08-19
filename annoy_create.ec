@@ -3,6 +3,18 @@
 #include "cannoy.h"
 #include "libudf.h"
 
+#if defined(WIN32) || defined(_WIN64)
+# define PATHSEP '\\'
+#else
+# define PATHSEP '/'
+#endif
+
+#ifdef DEBUG
+# define TRACE printf
+#else
+# define TRACE
+#endif
+
 /**************************************
  * build annoy index
  **************************************/
@@ -18,6 +30,8 @@ $ create procedure annoy_create(
 		bigint rid;
 		binary cval[4096];
 		varchar sql[1024];
+		char dbdir[1024];
+		int dbdirlen;
 	$ end declare section;
 	
 	hannoy idx1, idx2;
@@ -62,13 +76,22 @@ $ create procedure annoy_create(
    $close cur1;
    nitem = id;
    
+   TRACE("add %d items into annoy index\n", id);
+   
    AnnoyBuild(idx1, 10);
    AnnoyBuild(idx2, 1);
    
-   sprintf(aidxname, "%s_%s.tree", tbname, idxname);
+   $ select VALUE, LENGTH(VALUE) from SYSCONFIG where KEYWORD='DB_DBDIR' into :dbdir, :dbdirlen;
+   
+   dbdir[dbdirlen] = 0;
+   TRACE("dbdir: %s, %d\n", dbdir, dbdirlen);
+   
+   sprintf(aidxname, "%s%c%s_%s.tree", dbdir, PATHSEP, tbname, idxname);
+   TRACE("save index to: %s\n", aidxname);
    AnnoySave(idx1, aidxname);
    
-   sprintf(aidxname, "%s_%s_oid.tree", tbname, idxname);
+   sprintf(aidxname, "%s%c%s_%s_oid.tree", dbdir, PATHSEP, tbname, idxname);
+   TRACE("save index to: %s\n", aidxname);
    AnnoySave(idx2, aidxname);
 
 	DestroyAnnoyIndex(idx1);

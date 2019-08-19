@@ -30,6 +30,8 @@ void gcCloseDface(void *h, size_t dlen){
 	TRACE("gc close dface end: %x\n", dh);
 }
 
+static char instdir[1024];
+
 static dface getDfaceHanle(VAL args[]){
 	// get dface handle from cv
 	int rc = 0;
@@ -44,9 +46,10 @@ static dface getDfaceHanle(VAL args[]){
 		return dh;
 	}
 	
-
+	utInstDir(instdir);
+	
 	t1 = time(0);
-	if (rc = OpenDface(&dh, faceshape)) {
+	if (rc = OpenDface(&dh, faceshape, instdir)) {
 		TRACE("open dface engine error: %d\n", rc);
 		return NULL;
 	}
@@ -406,8 +409,9 @@ int  GETFACEDIST2(int nArg, VAL args[])
 	TRACE("args[1].len = %d\n", args[1].len);
 	TRACE("img2:(%d):%s\n", strlen(imgfn2), imgfn2);
 	
+	utInstDir(instdir);
 	// open dface engine
-	if (rc = OpenDface(&dh, faceshape)) {
+	if (rc = OpenDface(&dh, faceshape, instdir)) {
 		TRACE("open dface engine error: %d\n", rc);
 		rc = ERR_UDF;
 		goto exit;
