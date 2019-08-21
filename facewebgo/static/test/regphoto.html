@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>register face test</title>
+
+	<script src="/static/js/jquery-3.2.1.min.js"></script>
+	<script src="/static/js/ccv.js"></script>
+	<script src="/static/js/cascade.js"></script>
+	<script src="/static/js/jquery.facedetection.js"></script>
+
+	<style>
+		button
+		{
+			font-size:16pt;
+		}
+		.firstCol{
+			align:center
+			width:480
+		}
+	</style>
+
+</head>
+
+<body>
+
+	<div class="booth">
+		<img id="video" width="600" height="800"  src="/static/images/bys1.jpg" />
+		<canvas id="canvas" width="600" height="800"></canvas>
+	</div>
+	<table>
+	<tr> <td id="colButton" width="480" align="center">
+			<button id="btnstart" type="button">开始识别</button>
+			<button id="btnReg" type="button">拍照</button> 
+			<br>
+			<button id="btnSmall" type="button">小</button>
+			<button id="btnMiddle" type="button">中</button>
+			<button id="btnLarge" type="button">大</button>
+			<button id="btnDirection" type="button">竖向</button>
+	     </td>
+	     <td>
+			<span id="lblstatus">请点击【开始】按钮开始人脸识别</span>
+			<span id="lblStatus2"></span>
+			<br>
+			<span id="lblName">请输入您的名字:</span>
+			<input id="txtName" type=text></input>
+			<button id="btnUpload" type="button">注册照片</button>
+			<button id="btnReg2" type="button">识别人脸</button>
+		</td> 
+	</tr>
+	</table>
+
+	<div>
+		<img id="recogimg" src="/static/images/shexiangtou.jpeg"  style="height:180px;"/>
+		<span id="recogtxt"></span>
+	</div>
+
+  <script>
+		// document ready:
+		$(function () {
+			var canvas = document.getElementById('canvas');
+			var context = canvas.getContext('2d');
+			var video = document.getElementById('video');
+			var recogimg = document.getElementById('recogimg')
+			var recogtxt = document.getElementById('recogtxt')
+			var lblstatus = document.getElementById('lblstatus')
+			var btnSamll = document.getElementById('btnSmall')
+			var btnMiddle = document.getElementById('btnMiddle')
+			var btnLarge = document.getElementById('btnLarge')
+			var btnDirection = document.getElementById('btnDirection')
+			var colButton = document.getElementById('colButton')
+			var started = false
+			var is_stop = 0
+			var videoSize = "middle"
+			var videoDir = "horizon" // horizon or vertical
+			var faceWidth = 100
+			var boxWidth = 60
+			var tmid = -1
+			var nflush = 0
+			var tmout = -1
+			var btime = new Date();
+			
+			//console.log(navigator.userAgent)
+			
+			function setVideoSize(){
+				w = 480;
+				h = 360;
+				if (videoSize == "small") {
+					if (videoDir == "vertical") {
+						w = 300;
+						h = 400;
+					} else {
+						w = 400;
+						h = 300;
+					}
+					faceWidth = 100;
+					boxWidth = 60;
+				} else if (videoSize == "middle") {
+					if (videoDir == "vertical") {
+						w = 360;
+						h = 480;
+					} else {
+						w = 480;
+						h = 360;
+					}
+					faceWidth = 120;
+					boxWidth = 70;
+				} else if (videoSize == "large") {
+					if (videoDir == "vertical") {
+						w = 600;
+						h = 800;
+					} else {
+						w = 800;
+						h = 600;
+					}
+					faceWidth = 160;
+					boxWidth = 80;
+				}
+				video.width = w;
+				video.height = h;
+				canvas.width = w;
+				canvas.height = h;
+				colButton.width = w;
+			}
+		
+		   $("#btnstart").click(function(){
+			  if (started) {
+				started = false;
+				video.ontimeupdate = function(){};
+				is_stop = 1;
+				$("#btnstart").text("开始识别");
+				context.clearRect(0, 0, canvas.width, canvas.height);
+				$("#btnReg").show();
+				
+				//clearInterval(tmid)
+				tmid = -1
+			  } else {
+				started = true;
+				video.ontimeupdate = fillCanvas;
+				//tmid = setInterval(draw_canvas, 50)
+				is_stop = 0;
+				$("#btnstart").text("停止识别");
+				$("#lblstatus").text("");
+				$("#btnReg").hide();
+				$('#lblName').hide();
+				$('#txtName').hide();
+				$("#btnUpload").hide();
+			  }
+		   });
+		
+			$('#btnSmall').click(function(){
+				videoSize = "small";
+				setVideoSize();
+			});
+			
+			$('#btnMiddle').click(function(){
+				videoSize = "middle";
+				setVideoSize();
+			});
+			
+			$('#btnLarge').click(function(){
+				videoSize = "large";
+				setVideoSize();
+			});
+			
+			$('#btnDirection').click(function(){
+				if (videoDir == "vertical") {
+					videoDir = "horizon";
+					btnDirection.innerText = "竖向";
+				} else {
+					videoDir = "vertical";
+					btnDirection.innerText = "横向"
+				}
+				setVideoSize();
+			});
+			
+			$('#btnReg').click(function(){
+				context.drawImage(video, 0, 0, video.width, video.height);
+				$('#canvas').faceDetection({complete: function(faces){
+					if(faces.length>=1){
+						if (faces[0].width > faceWidth){
+							lblstatus.innerText = "如果对这张照片满意，就加入数据库   ";
+							$('#lblName').show();
+							$('#txtName').show();
+							$('#btnUpload').show();
+							$('#btnReg2').show();
+						} else {
+							lblstatus.innerText="人脸太小，再近一点";
+						}
+					} else {
+						lblstatus.innerText="未发现人脸，请重拍"
+					}
+				}});				
+			});
+			
+			$('#lblName').hide();
+			$('#txtName').hide();
+			$('#btnUpload').hide();
+			$('#btnReg2').hide();
+			
+			$('#btnUpload').click(function(){
+				var name = $('#txtName').val()
+				if (name == '') {
+					alert("请输入您的名字")
+					return
+				}
+				if (confirm("您确定要注册这张照片吗？") == false){
+					return;
+				}
+				
+				var base64 = canvas.toDataURL('image/jpeg');
+				registerPhoto(base64, name);
+				$('#lblName').hide();
+				$('#txtName').hide();
+				$('#btnUpload').hide();
+			});
+			
+			$('#btnReg2').click(function(){
+				fillCanvas();
+			});
+
+
+            function fillCanvas() {
+				//console.log("ontimeupdate: is_stop=" + is_stop);
+                //if(is_stop) return;
+				//nflush++
+				//$('#lblStatus2').html(nflush)
+                context.drawImage(video, 0, 0, video.width, video.height);
+
+                $('#canvas').faceDetection({complete: afterDetectFace});
+				//canvas.faceDetection({complete: afterDetectFace});
+            }
+			
+			function afterDetectFace(faces) {
+				//console.log("detect face:" + faces.length + " faces");
+				if(faces.length>=1){
+					if (faces[0].width > faceWidth){
+						var base64 = canvas.toDataURL('image/jpeg');
+						draw_face_box(faces);
+						lblstatus.innerText="已经看到您的脸，正在识别...";
+						is_stop = 1;
+						btime = new Date();
+						searchPhoto(base64);
+					} else {
+						draw_face_box(faces);
+						lblstatus.innerText="已经看到您的脸，再近一点";
+					}
+				} else {
+					lblstatus.innerText="未发现人脸，请靠近一点，正面看着我"
+				}
+			}
+
+            //画出人脸区域
+            function draw_face_box(faces) {
+				//console.log("drop face box:" + faces[0].width + "," + faces[0].height);
+                var rect;
+                var i;
+                //context.clearRect(0, 0, canvas.width, canvas.height);
+                for(i=0;i<faces.length;i++) {
+                    rect = faces[i];
+                    if(rect.width < boxWidth){
+						return;
+					}
+                    context.strokeStyle = '#00ec00';
+                    context.strokeRect(rect.x, rect.y, rect.width, rect.height);
+                    context.font = '11px Helvetica';
+                    context.fillStyle = "#fff";
+                    context.fillText('x: ' + rect.x + 'px', rect.x + rect.width + 5, rect.y + 11);
+                    context.fillText('y: ' + rect.y + 'px', rect.x + rect.width + 5, rect.y + 22);
+					
+                }
+				//console.log("drop face box: end");
+            }
+
+            //上传人脸图片
+            function searchPhoto(base64) {
+                $.ajax({
+                    "type":"POST",
+                    "url":"/search",
+                    "data":{'img':base64},
+                    'dataType':'json',
+                    beforeSend:function(){},
+                    success:function(result){
+                        console.log("upload over:" + result)
+                        //img_path = result.data.file_path
+						if (result.code == 0){
+							etime = new Date();
+							elapse = (etime - btime)/1000
+							lblstatus.innerText = "识别成功,耗时" + elapse + "秒，五秒后再次识别..."
+							recogimg.src = "/getphoto?id=" +　result.data.faceid;
+							recogtxt.innerText = "您好," + result.data.name + ", distance=" + result.data.dis;
+						} else if (result.code == 102) {
+							lblstatus.innerText  = "未识别, 五秒后再次识别..."
+							//recogtxt.innerText = "抱歉，我不认识您~"
+							recogimg.src = "/static/images/shexiangtou.jpeg"
+							$('#recogtxt').html(result.error);
+						} else if (result.code == 101){
+							is_stop = false;
+							$('#recogtxt').html(result.error);
+							lblstatus.innerText = "no face"
+							recogimg.src = "/static/images/shexiangtou.jpeg"
+							return;
+						} else {
+							lblstatus.innerText = "error"
+							$('#recogtxt').html(result.error);
+						}
+						
+						tmout = setTimeout(function(){
+							tmout = -1
+							if (started){
+								is_stop = false;
+							}
+							
+							$('#recogtxt').html("")
+							recogimg.src = "/static/images/shexiangtou.jpeg"
+						}, 5000);
+                    }
+                });
+            }
+			
+			function registerPhoto(base64, name) {
+				lblstatus.innerText = "注册中，请稍等..."
+                $.ajax({
+                    "type":"POST",
+                    "url":"/register",
+                    "data":{'img':base64, 'name':name},
+                    'dataType':'json',
+                    beforeSend:function(){},
+                    success:function(result){
+						console.log(result)
+						if (result.code == 0){
+							lblstatus.innerText = "注册成功，您的id是："+result.data.faceid;
+							recogimg.src = "/getphoto?id=" +　result.data.faceid;
+							recogtxt.innerText = "";
+						} else if (result.code == 101){ // no face
+							lblstatus.innerText = "没找到人脸，请重新抓取照片"
+							recogimg.src = "/static/images/shexiangtou.jpeg"
+						} else {
+							lblstatus.innerText = "error"
+							$('#recogtxt').html(result.error);
+						}
+                    }
+                });
+            }
+			
+      }); // $(document).ready() end
+
+
+  </script>
+</body>
+</html>

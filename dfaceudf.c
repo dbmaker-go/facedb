@@ -56,14 +56,12 @@ static dface getDfaceHanle(VAL args[]){
 	t2 = time(0);
 	TRACE("open dface cost %f seconds\n", difftime(t2,t1));
 	
-	if (rc = udfSetCobj(args, cvdface, &dh, sizeof(dh), NULL)){
+	if (rc = udfSetCobj(args, cvdface, &dh, sizeof(dh), gcCloseDface, NULL, NULL)){
 		TRACE("save dface handle into cv error. %d\n", rc);
 		CloseDface(dh);
 		return NULL;
 	} else {
 		TRACE("save dface handle into cv ok: %x\n", dh);
-		udfSetCobjGcfName(args, cvdface, "dfaceudf", "gcCloseDface");
-		TRACE("register dface gc func: dfaceudf.gcCloseDface\n");
 	}
 	
 	return dh;

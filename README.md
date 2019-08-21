@@ -19,6 +19,8 @@ git clone https://github.com/dbmaker-go/annoy
 cd cwrap
 g++ -shared -fPIC -o libcannoy.so cannoy.c
 ```
+here is the linux 64bit binary: https://github.com/dbmaker-go/annoy/raw/master/cwrap/bin/linux_x64/libcannoy.so
+
 for more detail, refer to https://github.com/dbmaker-go/annoy/tree/master/cwrap.
 
 * install cannoy to dbmaker installation path
@@ -41,6 +43,8 @@ g++ -std=c++11 -O3 dface.cpp ../dlib/all/source.cpp -I. -I..  -shared -fPIC \
   -o libdface.so -ljpeg -lpthread -lpng \
   -DDLIB_PNG_SUPPORT=1 -DDLIB_JPEG_SUPPORT=1 -DDLIB_NO_GUI_SUPPORT=1
 ```
+here is the linux x64 binary: https://github.com/dbmaker-go/dlib/raw/master/dface/bin/linux_x64/libdface.so
+
 for more detail, refer to https://github.com/dbmaker-go/dlib/tree/master/dface.
 
 * install dface to dbmaker installation path
@@ -55,7 +59,7 @@ cp dface.h /home/dbmaker/5.4/include
 ```
 [FACEDB]
 DB_DBDIR = /home/dbmaker/facedb
-DB_PTNUM = 24530
+DB_PTNUM = 20001
 DB_SVADR = 127.0.0.1
 ```
 
@@ -147,6 +151,7 @@ CREATE FUNCTION dfaceudf.JVECTODVEC(char(4000), integer) RETURNS binary(2048);
 ```
 
 6. create faces table and recognize face
+
 before call udf, msut download modle files, then unzip to dbmaker installation path: /home/dbmaker/5.4
 ```
 http://dlib.net/files/shape_predictor_5_face_landmarks.dat.bz2
@@ -170,7 +175,7 @@ select id,name,dvectojvec(vector, 128) as jvec from faces;
 // build annoy index:
 call annoy_create('faces','idxvec','id','vector', 128, ?);
 　
-// search nearest face from database
+// search nearest 5 faces from database:
 select id, name, sp.odist as distance from faces join 
   (call annoy_get('faces', 'idxvec', getfacevector('/home/dbsql/photo/yaoming4.jpg'), 128, 5)) as sp
   on faces.id = sp.orid;
@@ -184,7 +189,7 @@ The following is an example in go:
 　
 	var db *sql.DB
 	var err error
-	if db, err = sql.Open("dbmaker", "DSN=TMPBB;UID=SYSADM;PWD=;PTNUM=20002;SVADR=127.0.0.1;"); err != nil {
+	if db, err = sql.Open("dbmaker", "DSN=FACEDB;UID=SYSADM;PWD=;PTNUM=20001;SVADR=127.0.0.1;"); err != nil {
 		return err
 	}
 	defer db.Close()
@@ -213,3 +218,25 @@ The following is an example in go:
 	}
 ```
 
+7. Application sample: faceweb
+
+* build faceweb server
+```
+cd facewebgo
+GOPATH=$PWD:$GOPATH go build -o faceweb faceweb
+```
+
+* start faceweb server
+```
+cd facewebgo
+./faceweb
+```
+faceweb server will access face database. 127.0.0.1:20001/FACEDB.
+You can specify db's address, port number and dbname:
+```
+./faceweb --dbsvadr 192.168.1.52 --dbptnum 20001 --dbname FACEDB
+```
+
+* start browser to access https://127.0.0.1:9090/
+If your machine has a camera, you can test face recognition.
+You can use ipad or smart phone to access faceweb server, too.
