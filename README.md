@@ -5,7 +5,7 @@ Integrating annoy and dlib into DBMaker for face recognition.
 Using dlib to calculate face vector, and using annoy to search
 nearest faces from database by a given face image.
 
-The steps to building facedb is as follows:
+The steps to building facedb are as follows:
 
 ### 1. Install cannoy to dbmaker installation path
 

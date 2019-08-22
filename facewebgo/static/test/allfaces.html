@@ -1,0 +1,28 @@
+<html>
+<head>
+	<title>show all faces registerd in facedb </title>
+	
+	<style>
+		img
+		{
+			width:100px
+		}
+		div.imgc
+		{
+			float:left
+		}
+	</style>
+</head>
+
+<body>
+	{{range .}}
+		<div class="imgc">
+			<table>
+				<tr><td><img src="/getphoto?id={{.Id}}"/></td></tr>
+				<tr><td>id:{{.Id}}</td></tr>
+				<tr><td>name:{{.Name}}</td></tr>
+			</table>
+		</div>
+	{{end}}
+</body>
+</html>

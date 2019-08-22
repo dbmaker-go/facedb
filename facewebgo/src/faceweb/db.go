@@ -15,7 +15,7 @@ type Person struct {
 
 var mydb *sql.DB
 
-func openDb() (*sql.DB, error) {
+func dbOpen() (*sql.DB, error) {
 	if mydb != nil {
 		return mydb, nil
 	}
@@ -28,7 +28,7 @@ func openDb() (*sql.DB, error) {
 	return mydb, nil
 }
 
-func CloseDb() {
+func dbClose() {
 	if mydb != nil {
 		mydb.Close()
 	}
@@ -37,7 +37,7 @@ func CloseDb() {
 func dbSearchFace(img []byte, minDist float32) (person Person, found bool, oerr error) {
 	var db *sql.DB
 	var err error
-	if db, err = openDb(); err != nil {
+	if db, err = dbOpen(); err != nil {
 		return Person{}, false, err
 	}
 	//defer db.Close()
@@ -66,7 +66,7 @@ func dbSearchFace(img []byte, minDist float32) (person Person, found bool, oerr 
 func dbInsFace(name string, img []byte) (p Person, oerr error) {
 	var db *sql.DB
 	var err error
-	if db, err = openDb(); err != nil {
+	if db, err = dbOpen(); err != nil {
 		return Person{}, err
 	}
 	//defer db.Close()
@@ -95,7 +95,7 @@ func dbInsFace(name string, img []byte) (p Person, oerr error) {
 }
 
 func dbUpdateAnnoyIdx() error {
-	if db, err := openDb(); err != nil {
+	if db, err := dbOpen(); err != nil {
 		return err
 	} else {
 		var nItem int
@@ -108,7 +108,7 @@ func dbUpdateAnnoyIdx() error {
 }
 
 func dbGetPhoto(id int) ([]byte, error) {
-	if db, err := openDb(); err != nil {
+	if db, err := dbOpen(); err != nil {
 		return nil, err
 	} else {
 		sql := "select photo from faces where id = ?"
@@ -123,6 +123,26 @@ func dbGetPhoto(id int) ([]byte, error) {
 				return photo, nil
 			}
 			return nil, nil
+		}
+	}
+}
+
+func dbGetAllFaces() ([]Person, error) {
+	if db, err := dbOpen(); err != nil {
+		return nil, err
+	} else {
+		sql := "select id,name from faces limit 100"
+		if rows, err := db.Query(sql); err != nil {
+			return nil, err
+		} else {
+			defer rows.Close()
+			faces := make([]Person, 0, 100)
+			for rows.Next() {
+				face := Person{}
+				rows.Scan(&face.Id, &face.Name)
+				faces = append(faces, face)
+			}
+			return faces, nil
 		}
 	}
 }

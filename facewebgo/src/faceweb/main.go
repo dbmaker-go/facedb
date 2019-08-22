@@ -20,7 +20,7 @@ var dbname string = "FACEDB"
 
 func main() {
 	defer func() {
-		CloseDb()
+		dbClose()
 	}()
 
 	var port string
@@ -64,6 +64,7 @@ func main() {
 	http.HandleFunc("/search", searchFace)
 	http.HandleFunc("/register", registerFace)
 	http.HandleFunc("/getphoto", getPhoto)
+	http.HandleFunc("/allfaces", showFaces)
 
 	if httpEnabled {
 		fmt.Printf("face web server is listening on http://*:%s\n", port)
