@@ -114,6 +114,8 @@ static void jvec2dvec(char *json, int dimension, double *vec){
 	return;
 }
 
+
+
 /*
 CREATE FUNCTION dfaceudf.GETFACEVECTOR(VARCHAR(256)) RETURNS binary(2048);
 	IN:  imgfilename varchar(256) // char[]
@@ -185,6 +187,71 @@ CREATE FUNCTION dfaceudf.GETFACEVECTOR2(long varbinary) RETURNS binary(2048);
 #define MAX_BUFLEN (1024)
 #define MIN(a, b) ((a)<(b)?(a):(b))
 
+static int Blob2TmpFile(VAL args[], BBObj bbSrc, char *ofName)
+{
+	int rc = 0, lrc;
+	i31   hSrc = 0;           /* handles of input blob and output temp blob   */
+	i31   szSrc;              /* input blob size                              */
+	i31   szBuf, szRead;      /* buffer szie and return read size             */
+	i31   length;
+	char  buf[MAX_BUFLEN];    /* working memory for copying data              */
+	char imgfn[256];
+	long tempfd = 0;
+	long tempoff = 0;
+	long retLen;
+	
+	if (rc = _UDFBbSize(args, bbSrc, &szSrc)){
+		TRACE("get bb size error: %d\n", rc);
+		goto exit;
+	}
+	length = szSrc;
+  
+  if (rc = _UDFBbOpen(args, bbSrc, &hSrc)){
+  	TRACE("open bb error: %d\n", rc);
+  	rc = ERR_UDF;
+    goto exit;
+  }
+  
+  // make a tmp file for writing image:
+  if (utMksTemp(imgfn,&tempfd))
+  {
+  	rc = ERR_UDF;
+  	goto exit;
+  }
+  
+  strcpy(ofName, imgfn);
+
+  /**************************************************************************
+   * loop to read data from source BLOB and write to temp BLOB
+   **************************************************************************/
+  while (1)
+    {
+    szBuf = MIN(length, MAX_BUFLEN);
+    if (rc = _UDFBbRead(args, hSrc, szBuf, &szRead, buf))
+      goto exit;
+
+     if (utFileWrite(tempfd, tempoff, szRead, buf, &retLen))
+     {
+     	rc = ERR_UDF;
+     	goto exit;
+     }
+     tempoff += szRead;
+
+    length -= szRead;
+
+    if ((length == 0) || (szRead == 0))
+      break;
+    }
+
+exit:
+	if (hSrc && ((lrc = _UDFBbClose(args, hSrc)) > rc))
+	    rc = lrc;
+	if (tempfd > 0)
+		utFileClose(tempfd);
+
+    return rc;
+}
+
 #ifdef DB_PCWIN
 __declspec(dllexport)
 #endif
@@ -202,73 +269,24 @@ int  GETFACEVECTOR2(int nArg, VAL args[])
 	time_t t1,t2;
 	
 	BBObj  bbSrc;       /* object id of input blob and output temp blob #005 */
-  i31   hSrc = 0, hTmp = 0; /* handles of input blob and output temp blob   */
-  i31   szSrc;              /* input blob size                              */
-  i31   szBuf, szRead;      /* buffer szie and return read size             */
-  i31   length;
-  char  buf[MAX_BUFLEN];    /* working memory for copying data              */
-  i63   start;
-  
-  if (args[0].type == NULL_TYP){
-  	TRACE("NULL args\n");
-    goto exit;
-  }
-  
-  TRACE("args[0].type = %x\n", args[0].type);
+	i31   hSrc = 0, hTmp = 0; /* handles of input blob and output temp blob   */
+	i31   szSrc;              /* input blob size                              */
+	i31   szBuf, szRead;      /* buffer szie and return read size             */
+	i31   length;
+	char  buf[MAX_BUFLEN];    /* working memory for copying data              */
+	i63   start;
 
-  memcpy((char *)(&bbSrc), args[0].u.xval, BBID_SIZE); /* #005 */
-  if (rc = _UDFBbSize(args, bbSrc, &szSrc)){
-  	TRACE("get bb size error: %d\n", rc);
-    goto exit;
-  }
-  length = szSrc;
-  
-  if (rc = _UDFBbOpen(args, bbSrc, &hSrc)){
-  	TRACE("open bb error: %d\n", rc);
-  	rc = ERR_UDF;
-    goto exit;
-  }
-  
-  // make a tmp file for writing image:
-  if (utMksTemp(imgfn,&tempfd))
-  {
-  	rc = ERR_UDF;
-  	goto exit;
-  }
-/*
-  strcpy(imgfn, "tmp_img_file");
-  if ((f = fopen(imgfn,"w+")) == NULL){
-  	printf("open tmp file error\n");
-  	rc = ERR_UDF;
-  	goto exit;
-  }
-*/
-  /**************************************************************************
-   * loop to read data from source BLOB and write to temp BLOB
-   **************************************************************************/
-  while (1)
-    {
-    szBuf = MIN(length, MAX_BUFLEN);
-    if (rc = _UDFBbRead(args, hSrc, szBuf, &szRead, buf))
-      goto exit;
+	if (args[0].type == NULL_TYP){
+		TRACE("NULL args\n");
+		goto exit;
+	}
 
-     //fwrite(buf, szRead, 1, f);
-     if (utFileWrite(tempfd, tempoff, szRead, buf, &retLen))
-     {
-     	rc = ERR_UDF;
-     	goto exit;
-     }
-     tempoff += szRead;
+	TRACE("args[0].type = %x\n", args[0].type);
 
-    length -= szRead;
+	memcpy((char *)(&bbSrc), args[0].u.xval, BBID_SIZE); /* #005 */
 
-    if ((length == 0) || (szRead == 0))
-      break;
-    }
-    
-    //fclose(f);
-    utFileClose(tempfd);
-    tempfd = 0;
+	if (rc = Blob2TmpFile(args, bbSrc, imgfn))
+		goto exit;
   
 	len = strlen(imgfn);
 	for (i=len-1; i>0 && imgfn[i]==' '; i--)
@@ -300,10 +318,7 @@ int  GETFACEVECTOR2(int nArg, VAL args[])
 	args[0].type = BIN_TYP;
 	
 exit:
-	if (hSrc && ((lrc = _UDFBbClose(args, hSrc)) > rc))
-	    rc = lrc;
-	if (tempfd > 0)
-		utFileClose(tempfd);
+
 	utFileRemove(imgfn);
     
 	//if (dh && (lrc = CloseDface(dh)) > rc)
@@ -377,7 +392,7 @@ exit:
 }
 
 /*
-CREATE FUNCTION dfaceudf.GETFACEDIST2(char(256), char(256)) RETURNS double;
+CREATE FUNCTION dfaceudf.GETFACEDIST2(long varbinary, long varbinary) RETURNS double;
 */
 
 
@@ -392,25 +407,29 @@ int  GETFACEDIST2(int nArg, VAL args[])
 	double dist;
 	int rc, lrc, i;
 	size_t len;
+	BBObj bb1, bb2;
 	
-	strncpy(imgfn1, args[0].u.xval, args[0].len>255? 255:args[0].len);
-	len = strlen(imgfn1);
-	for (i=len-1; i>0 && imgfn1[i]==' '; i--)
-		imgfn1[i] = '\0';
+	if (args[0].type == NULL_TYP || args[1].type == NULL_TYP){
+		TRACE("NULL args\n");
+		goto exit;
+	}
+	
+	memcpy((char *)(&bb1), args[0].u.xval, BBID_SIZE);
+	memcpy((char *)(&bb2), args[1].u.xval, BBID_SIZE);
+	
+	if (rc = Blob2TmpFile(args, bb1, imgfn1))
+		goto exit;
+	if (rc = Blob2TmpFile(args, bb2, imgfn2))
+		goto exit;
+	
 	TRACE("args[0].len = %d\n", args[0].len);
 	TRACE("img1:(%d):%s\n", strlen(imgfn1), imgfn1);
 	
-	strncpy(imgfn2, args[1].u.xval, args[1].len>255? 255:args[1].len);
-	len = strlen(imgfn2);
-	for (i=len-1; i>0 && imgfn2[i]==' '; i--)
-		imgfn2[i] = '\0';
 	TRACE("args[1].len = %d\n", args[1].len);
 	TRACE("img2:(%d):%s\n", strlen(imgfn2), imgfn2);
 	
-	utInstDir(instdir);
-	// open dface engine
-	if (rc = OpenDface(&dh, faceshape, instdir)) {
-		TRACE("open dface engine error: %d\n", rc);
+	if ((dh = getDfaceHanle(args)) == NULL){
+		TRACE("get dface handle fail.\n");
 		rc = ERR_UDF;
 		goto exit;
 	}
@@ -426,9 +445,10 @@ int  GETFACEDIST2(int nArg, VAL args[])
 	args[0].len = sizeof(dist);
 	
 exit:
-	// close dface engine
-	if (dh && (lrc = CloseDface(dh)) > rc)
-		rc = lrc;
+	
+	utFileRemove(imgfn1);
+	utFileRemove(imgfn2);
+	
 	if (rc)
 		return rc;
 	
