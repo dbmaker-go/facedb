@@ -19,20 +19,25 @@ var dbptnum string = "20001"
 var dbname string = "FACEDB"
 
 func main() {
+	defer func() {
+		CloseDb()
+	}()
+
 	var port string
 	var wroot string
-	var httpsEnabled bool
+	var httpEnabled bool
 
 	flag.StringVar(&wroot, "r", "", "web root dir")
 	flag.StringVar(&port, "p", "9090", "listen port number")
-	flag.BoolVar(&httpsEnabled, "s", true, "enable https?")
+	flag.BoolVar(&httpEnabled, "s", false, "enable http?")
 	flag.StringVar(&dbsvadr, "dbsvadr", dbsvadr, "db_svadr")
 	flag.StringVar(&dbptnum, "dbptnum", dbptnum, "db_ptnum")
 	flag.StringVar(&dbname, "dbname", dbname, "facedb name")
 	flag.Parse()
 
 	if wroot == "" {
-		wroot, _ = os.Getwd()
+		wroot = filepath.Dir(os.Args[0])
+		//wroot, _ = os.Getwd()
 	}
 	if dir, err := filepath.Abs(wroot); err != nil {
 		fmt.Println("get web root dir fail:", err)
@@ -46,6 +51,7 @@ func main() {
 
 	fmt.Printf("web root: %s\n", webroot)
 	//fmt.Printf("img root: %s\n", imgroot)
+	fmt.Printf("Access db: %s:%s/%s\n", dbsvadr, dbptnum, dbname)
 
 	fsh := http.FileServer(http.Dir(webroot))
 	//imgFh := http.FileServer(http.Dir(imgroot))
@@ -59,13 +65,13 @@ func main() {
 	http.HandleFunc("/register", registerFace)
 	http.HandleFunc("/getphoto", getPhoto)
 
-	if !httpsEnabled {
+	if httpEnabled {
 		fmt.Printf("face web server is listening on http://*:%s\n", port)
 		log.Fatal(http.ListenAndServe(":"+port, nil))
 	} else {
 		fmt.Printf("face web server is listening on https://*:%s\n", port)
-		log.Fatal(http.ListenAndServeTLS(":"+port, "server.crt",
-			"server.key", nil))
+		log.Fatal(http.ListenAndServeTLS(":"+port, filepath.Join(wroot, "server.crt"),
+			filepath.Join(wroot, "server.key"), nil))
 	}
 
 }

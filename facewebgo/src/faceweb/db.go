@@ -28,6 +28,12 @@ func openDb() (*sql.DB, error) {
 	return mydb, nil
 }
 
+func CloseDb() {
+	if mydb != nil {
+		mydb.Close()
+	}
+}
+
 func dbSearchFace(img []byte, minDist float32) (person Person, found bool, oerr error) {
 	var db *sql.DB
 	var err error
