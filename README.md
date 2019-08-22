@@ -5,39 +5,32 @@ Integrating annoy and dlib into DBMaker for face recognition.
 Using dlib to calculate face vector, and using annoy to search
 nearest faces from database by a given face image.
 
-The steps to building facedb:
+The steps to building facedb is as follows:
 
-1. build cannoy library and install it to dbmaker installation path
+### 1. Install cannoy to dbmaker installation path
 
-* down cannoy source
+#### 1.1 build cannoy.
 ```
 git clone https://github.com/dbmaker-go/annoy
-```
-
-* build cannoy.
-```
 cd cwrap
 g++ -shared -fPIC -o libcannoy.so cannoy.c
 ```
+
 here is the linux 64bit binary: https://github.com/dbmaker-go/annoy/raw/master/cwrap/bin/linux_x64/libcannoy.so
 
 for more detail, refer to https://github.com/dbmaker-go/annoy/tree/master/cwrap.
 
-* install cannoy to dbmaker installation path
+#### 1.2 Install cannoy to dbmaker installation path
 ```
 cp libcannoy.so /home/dbmaker/5.4/lib/so/
 cp cannoy.h /home/dbmaker/5.4/include/
 ```
 
-2. build dface library and install it to dbmaker installation path
+### 2. Install dface to dbmaker installation path
 
-* down dface source
+#### 2.1 build dface library
 ```
 git clone https://github.com/dbmaker-go/dlib
-```
-
-* build dface library
-```
 cd dface
 g++ -std=c++11 -O3 dface.cpp ../dlib/all/source.cpp -I. -I..  -shared -fPIC \
   -o libdface.so -ljpeg -lpthread -lpng \
@@ -47,15 +40,26 @@ here is the linux x64 binary: https://github.com/dbmaker-go/dlib/raw/master/dfac
 
 for more detail, refer to https://github.com/dbmaker-go/dlib/tree/master/dface.
 
-* install dface to dbmaker installation path
+#### 2.2 install dface to dbmaker installation path
 ```
 cp libdface.so /home/dbmaker/5.4/lib/so
 cp dface.h /home/dbmaker/5.4/include
 ```
 
-3. create a database FACEDB:
+#### 2.3 install dface modle files to dbmaker installation path
 
-* add [FACEDB] section into /home/dbmaker/5.4/dmconfig.ini:
+dface need modle files to recognize face. 
+download modle files:
+```
+http://dlib.net/files/shape_predictor_5_face_landmarks.dat.bz2
+http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
+http://dlib.net/files/dlib_face_recognition_resnet_model_v1.dat.bz2
+```
+then unzip them to /home/dbmaker/5.4/
+
+### 3. create a database FACEDB:
+
+#### 3.1 add [FACEDB] section into /home/dbmaker/5.4/dmconfig.ini:
 ```
 [FACEDB]
 DB_DBDIR = /home/dbmaker/facedb
@@ -63,22 +67,30 @@ DB_PTNUM = 20001
 DB_SVADR = 127.0.0.1
 ```
 
-* crate database and tables
+#### 3.2 crate database and tables
+
+use dmsqls or jtool to create db. then create following tabes:
 ```
 create table tmpvec(orid bigint, ovec char(4000)); -- for precompile sp
 create table tmprid(rid bigint, distance double);  -- for precompile sp
 ```
 
-* start database with dmserver
+#### 3.3 start database with dmserver
 
-4. build sp for annoy index
+start database for creating sp and udf.
 
-* copy annoy_create.ec, annoy_get.ec, annoy_getall.ec to DBDIR
+### 4. build sp for annoy index
+
+#### 4.1 copy annoy_create.ec, annoy_get.ec, annoy_getall.ec to DBDIR
 ```
-cp annoy_*.ec /home/dbmaker/facedb
+git clone https://github.com/dbmaker-go/facedb
+cp facedb/annoy_*.ec /home/dbmaker/facedb
 ```
 
-* translate ec to c:
+#### 4.2 translate ec to c:
+
+suppose /home/dbmaker/5.4/bin has been added into PATH env variable.
+
 ```
 cd /home/dbmaker/facedb
 dmppcc -d facedb -u SYSADM -n -sp annoy_create.ec
@@ -86,26 +98,27 @@ dmppcc -d facedb -u SYSADM -n -sp annoy_get.ec
 dmppcc -d facedb -u SYSADM -n -sp annoy_getall.ec
 ```
 
-* build SP libraries(link to libcannoy.so)
+#### 4.3 build SP libraries(link to libcannoy.so)
+
 ```
 cc -shared -fPIC -I/home/dbmaker/5.4/include -I. -L/home/dbmaker/5.4/lib/so -L.\
    -o ANNOY_GETSYSADM.so annoy_get.c -lcannoy -ldmudf
-　
+
 cc -shared -fPIC -I/home/dbmaker/5.4/include -I. -L/home/dbmaker/5.4/lib/so -L.\
    -o ANNOY_GETALLSYSADM.so annoy_getall.c -lcannoy -ldmudf
-　
+
 cc -shared -fPIC -I/home/dbmaker/5.4/include -I. -L/home/dbmaker/5.4/lib/so -L.\
    -o ANNOY_CREATESYSADM.so annoy_create.c -lcannoy -ldmudf
 ```
 
-* register sp in database
+#### 4.4 register sp in database
 ```
 create procedure annoy_create(
 	char(128) tbname INPUT, 
 	char(128) idxname INPUT,
 	char(128) ridcol INPUT,
 	char(128) idxcol INPUT,
-	int dimession INPUT,
+	int dimension INPUT,
 	int nitem OUTPUT) returns status ;
 　
 create procedure annoy_get(
@@ -126,39 +139,36 @@ create function ANNOY_GETSYSADM.loadsp_get() returns int;
 create function ANNOY_GETALLSYSADM.loadsp_getall() returns int;
 ```
 
-5. build udf for face vector
+### 5. build udf for face vector
 
-* copy dfaceudf.c to DBDIR
+#### 5.1 copy dfaceudf.c to DBDIR
 ```
-cp dfaceudf.c /home/dbmaker/facedb/
+git clone https://github.com/dbmaker-go/facedb
+cp facedb/dfaceudf.c /home/dbmaker/facedb/
 ```
 
-* build so(link to libdface.so)
+#### 5.2 build udf library dfaceudf.so(link to libdface.so)
 ```
 cd /home/dbmaker/facedb
 cc -shared -fPIC -o dfaceudf.so dfaceudf.c  -I. -I/home/dbmaker/5.4/include \
   -L/home/dbmaker/5.4/lib/so -L. -ldmudf -l dface
 ```
 
-* register udf to database
+#### 5.3 register udf to database
+
 if can not find libdface.so, please add /home/dbmaker/5.4/lib/so into LD_LIBRARY_PATH env variable.
 ```
 CREATE FUNCTION dfaceudf.GETFACEVECTOR(VARCHAR(256)) RETURNS binary(2048);
 CREATE FUNCTION dfaceudf.GETFACEVECTOR2(long varbinary) RETURNS binary(2048);
 CREATE FUNCTION dfaceudf.GETFACEDIST(char(256), char(256)) RETURNS double;
+CREATE FUNCTION dfaceudf.GETFACEDIST2(long varbinary, long varbinary) RETURNS double;
 CREATE FUNCTION dfaceudf.DVECTOJVEC(binary(2048), integer) RETURNS char(4000);
 CREATE FUNCTION dfaceudf.JVECTODVEC(char(4000), integer) RETURNS binary(2048);
 ```
 
-6. create faces table and recognize face
+### 6. create faces table and recognize face
 
-before call udf, msut download modle files, then unzip to dbmaker installation path: /home/dbmaker/5.4
-```
-http://dlib.net/files/shape_predictor_5_face_landmarks.dat.bz2
-http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
-http://dlib.net/files/dlib_face_recognition_resnet_model_v1.dat.bz2
-```
-
+#### 6.1 create table FACES to store photo and vector:
 ```
 create table faces(id serial primary key, name char(20), photo file, vector binary(2048));
 create trigger ains after insert on FACES for each row(
@@ -171,22 +181,50 @@ select * from faces;
 select id,name,dvectojvec(vector, 128) as jvec from faces;
 　
 // insert all photos into faces table.
-　
-// build annoy index:
+```
+
+#### 6.2 build annoy plugin index for search nearest faces:
+```
 call annoy_create('faces','idxvec','id','vector', 128, ?);
-　
+```
+
+#### 6.3 use annoy index to search nearest faces:
+```
 // search nearest 5 faces from database:
 select id, name, sp.odist as distance from faces join 
   (call annoy_get('faces', 'idxvec', getfacevector('/home/dbsql/photo/yaoming4.jpg'), 128, 5)) as sp
   on faces.id = sp.orid;
-　
-// in program, we can read image into buffer, and bind it to the following sql:
+
+// search nearest 1 face (distance < 0.38):
+select id, name, sp.odist as distance from faces join 
+  (call annoy_get('faces', 'idxvec', getfacevector('/home/dbsql/photo/yaoming4.jpg'), 128, 1)) as sp
+  on faces.id = sp.orid where sp.odist < 0.38;
+```
+
+#### 6.4 create stored command for easy use:
+```
+create command getface5 as 
+  select id, name, sp.odist as distance from faces join 
+  (call annoy_get('faces', 'idxvec', getfacevector2(?), 128, 5)) as sp
+  on faces.id = sp.orid where sp.odist < ?;
+
+execute command getface5(?, 0.38);
+&'/home/dbsql/photo/yaoming4.jpg';
+```
+
+#### 6.5 client program search faces.
+
+We can give photo content to database to search faces.
+
+in program, we can read image into buffer, and bind it to the following sql:
+```
 select id, name, sp.odist as distance from faces join 
   (call annoy_get('faces', 'idxvec', getfacevector2(?), 128, 5)) as sp
   on faces.id = sp.orid;
-　
+```
+
 The following is an example in go:
-　
+```
 	var db *sql.DB
 	var err error
 	if db, err = sql.Open("dbmaker", "DSN=FACEDB;UID=SYSADM;PWD=;PTNUM=20001;SVADR=127.0.0.1;"); err != nil {
@@ -199,6 +237,8 @@ The following is an example in go:
 		on faces.id = sp.orid;`
 	img, _ := ioutil.ReadFile("/home/dbsql/photo/yaoming8.jpg")
 
+	// sql = "execute command getface5(?, 0.4) // stored command getface5 is available here!
+	
 	if rows, err := db.Query(sql, img); err != nil {
 		return err
 	} else {
@@ -218,25 +258,50 @@ The following is an example in go:
 	}
 ```
 
-7. Application sample: faceweb
+### 7. Application sample: faceweb
 
-* build faceweb server
+Faceweb is a web server for demostrating face recognition. 
+
 ```
++---------+  http   +---------+   tcp   +-----------------+
+| browser | <-----> | faceweb | <-----> | facedb(DBMaker) |
++---------+         +---------+         +-----------------+
+```
+* browser: open camera and capture face image, then send it to faceweb.
+* faceweb: receive face image and query faces from facedb.
+* facedb: store face photo information, search nearest faces.
+
+#### 7.1 build faceweb server
+
+```
+git clone https://github.com/dbmaker-go/facedb
 cd facewebgo
 GOPATH=$PWD:$GOPATH go build -o faceweb faceweb
 ```
 
-* start faceweb server
+#### 7.2 start faceweb server
+
+Assume the database FACEDB has been running.
+
 ```
 cd facewebgo
 ./faceweb
 ```
-faceweb server will access face database. 127.0.0.1:20001/FACEDB.
+
+faceweb server will access database: 127.0.0.1:20001/FACEDB.
 You can specify db's address, port number and dbname:
 ```
 ./faceweb --dbsvadr 192.168.1.52 --dbptnum 20001 --dbname FACEDB
 ```
 
-* start browser to access https://127.0.0.1:9090/
+For more detail, see usage:
+```
+./faceweb -h
+```
+
+#### 7.3 start browser to access https://127.0.0.1:9090/
+
 If your machine has a camera, you can test face recognition.
 You can use ipad or smart phone to access faceweb server, too.
+
+
