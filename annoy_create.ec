@@ -88,11 +88,17 @@ $ create procedure annoy_create(
    
    sprintf(aidxname, "%s%c%s_%s.tree", dbdir, PATHSEP, tbname, idxname);
    TRACE("save index to: %s\n", aidxname);
-   AnnoySave(idx1, aidxname);
+   if (!AnnoySave(idx1, aidxname)){
+		TRACE("save index fail: %s\n", aidxname);
+		SQLCODE = -1;
+   }
    
    sprintf(aidxname, "%s%c%s_%s_oid.tree", dbdir, PATHSEP, tbname, idxname);
    TRACE("save index to: %s\n", aidxname);
-   AnnoySave(idx2, aidxname);
+   if (!AnnoySave(idx2, aidxname)){
+		TRACE("save index fail: %s\n", aidxname);
+		SQLCODE = -1;
+   }
 
 	DestroyAnnoyIndex(idx1);
 	DestroyAnnoyIndex(idx2);

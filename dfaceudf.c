@@ -199,9 +199,9 @@ static int Blob2TmpFile(VAL args[], BBObj bbSrc, char *ofName)
 	i31   length;
 	char  buf[MAX_BUFLEN];    /* working memory for copying data              */
 	char imgfn[256];
-	long tempfd = 0;
-	long tempoff = 0;
-	long retLen;
+	i63 tempfd = 0;
+	i63 tempoff = 0;
+	i63 retLen;
 	
 	if (rc = _UDFBbSize(args, bbSrc, &szSrc)){
 		TRACE("get bb size error: %d\n", rc);
@@ -261,23 +261,12 @@ _declspec(dllexport)
 int  GETFACEVECTOR2(int nArg, VAL args[])
 {
 	int rc = 0, lrc, i, len;
-	char imgfn[256]; // = (char *)args[0].u.sval;
-	long tempfd = 0;
-	long tempoff = 0;
-	long retLen;
+	BBObj bbSrc;
+	char imgfn[256];
 	dface dh = NULL;
 	facevector fvec;
 	char *dvec;
-	FILE *f = NULL;
 	time_t t1,t2;
-	
-	BBObj  bbSrc;       /* object id of input blob and output temp blob #005 */
-	i31   hSrc = 0, hTmp = 0; /* handles of input blob and output temp blob   */
-	i31   szSrc;              /* input blob size                              */
-	i31   szBuf, szRead;      /* buffer szie and return read size             */
-	i31   length;
-	char  buf[MAX_BUFLEN];    /* working memory for copying data              */
-	i63   start;
 
 	if (args[0].type == NULL_TYP){
 		TRACE("NULL args\n");

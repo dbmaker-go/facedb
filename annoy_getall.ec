@@ -37,12 +37,13 @@ static void dvec2jvec(double dvec[], int nvec, char *obuf)
 	return;
 }
 
-void gcidx(void *h, size_t dlen){
+int gcidx(void *h){
 	hannoy idx = NULL;
-	TRACE("gc annoy index begin: %p, %d\n",h, dlen);
-	idx = (hannoy)(*(void **)h);
+	TRACE("gc annoy index begin: %p\n",h);
+	idx = (hannoy)h;
 	DestroyAnnoyIndex(idx);
 	TRACE("gc annoy index: %x\n", idx);
+	return 0;
 }
 
 $ create procedure annoy_getall(
