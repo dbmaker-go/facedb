@@ -20,12 +20,13 @@ int  GETFACEVECTOR2(int nArg, VAL args[]);
 
 #define ERR_UDF (9300)
 
-#ifdef DB_PCWIN
-__declspec(dllexport)
+#if defined(WIN32) || defined(_WIN64)
+_declspec(dllexport)
 #endif
 void gcCloseDface(void *h, size_t dlen){
+	dface dh = NULL;
 	TRACE("gc close dface begin: %p, %d\n",h, dlen);
-	dface dh = (dface)(*(void **)h);
+	dh = (dface)(*(void **)h);
 	CloseDface(dh);
 	TRACE("gc close dface end: %x\n", dh);
 }
@@ -121,8 +122,8 @@ CREATE FUNCTION dfaceudf.GETFACEVECTOR(VARCHAR(256)) RETURNS binary(2048);
 	IN:  imgfilename varchar(256) // char[]
 	RET: facevector binary(2048)  // double[]
 */
-#ifdef DB_PCWIN
-__declspec(dllexport)
+#if defined(WIN32) || defined(_WIN64)
+_declspec(dllexport)
 #endif
 int  GETFACEVECTOR(int nArg, VAL args[])
 {
@@ -133,7 +134,9 @@ int  GETFACEVECTOR(int nArg, VAL args[])
 	char *dvec;
 	time_t t1,t2;
 	
-	strncpy(imgfn, args[0].u.xval, args[0].len>255? 255:args[0].len);
+	i = args[0].len>255? 255:args[0].len;
+	strncpy(imgfn, args[0].u.xval, i);
+	imgfn[i] = '\0';
 	len = strlen(imgfn);
 	for (i=len-1; i>0 && imgfn[i]==' '; i--)
 		imgfn[i] = '\0';
@@ -252,8 +255,8 @@ exit:
     return rc;
 }
 
-#ifdef DB_PCWIN
-__declspec(dllexport)
+#if defined(WIN32) || defined(_WIN64)
+_declspec(dllexport)
 #endif
 int  GETFACEVECTOR2(int nArg, VAL args[])
 {
@@ -339,8 +342,8 @@ CREATE FUNCTION dfaceudf.GETFACEDIST(char(256), char(256)) RETURNS double;
 */
 
 
-#ifdef DB_PCWIN
-__declspec(dllexport)
+#if defined(WIN32) || defined(_WIN64)
+_declspec(dllexport)
 #endif
 int  GETFACEDIST(int nArg, VAL args[])
 {
@@ -351,14 +354,18 @@ int  GETFACEDIST(int nArg, VAL args[])
 	int rc, lrc, i;
 	size_t len;
 	
-	strncpy(imgfn1, args[0].u.xval, args[0].len>255? 255:args[0].len);
+	i = args[0].len>255? 255:args[0].len;
+	strncpy(imgfn1, args[0].u.xval, i);
+	imgfn1[i] = '\0';
 	len = strlen(imgfn1);
 	for (i=len-1; i>0 && imgfn1[i]==' '; i--)
 		imgfn1[i] = '\0';
 	TRACE("args[0].len = %d\n", args[0].len);
 	TRACE("img1:(%d):%s\n", strlen(imgfn1), imgfn1);
 	
-	strncpy(imgfn2, args[1].u.xval, args[1].len>255? 255:args[1].len);
+	i = args[1].len>255? 255:args[1].len;
+	strncpy(imgfn2, args[1].u.xval, i);
+	imgfn2[i] = '\0';
 	len = strlen(imgfn2);
 	for (i=len-1; i>0 && imgfn2[i]==' '; i--)
 		imgfn2[i] = '\0';
@@ -396,8 +403,8 @@ CREATE FUNCTION dfaceudf.GETFACEDIST2(long varbinary, long varbinary) RETURNS do
 */
 
 
-#ifdef DB_PCWIN
-__declspec(dllexport)
+#if defined(WIN32) || defined(_WIN64)
+_declspec(dllexport)
 #endif
 int  GETFACEDIST2(int nArg, VAL args[])
 {
@@ -467,8 +474,8 @@ double array to json array: convert double[128] to json array: '[1, 2, 3, ...]'
 */
 
 
-#ifdef DB_PCWIN
-__declspec(dllexport)
+#if defined(WIN32) || defined(_WIN64)
+_declspec(dllexport)
 #endif
 int  DVECTOJVEC(int nArg, VAL args[])
 {
@@ -510,8 +517,8 @@ json array to double array: convert json array: '[1, 2, 3, ...]' to double[128].
 */
 
 
-#ifdef DB_PCWIN
-__declspec(dllexport)
+#if defined(WIN32) || defined(_WIN64)
+_declspec(dllexport)
 #endif
 int  JVECTODVEC(int nArg, VAL args[])
 {

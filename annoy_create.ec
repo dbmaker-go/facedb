@@ -108,8 +108,8 @@ CREATE FUNCTION ANNOY_CREATESYSADM.LOADSP_CREATE() RETURNS int;
 	
 this udf is only for loading sp library when starting db.
 */
-#ifdef DB_PCWIN
-__declspec(dllexport)
+#if defined(WIN32) || defined(_WIN64)
+_declspec(dllexport)
 #endif
 int  LOADSP_CREATE(int nArg, VAL args[])
 {

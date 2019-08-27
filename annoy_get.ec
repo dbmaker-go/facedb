@@ -18,16 +18,18 @@
 #endif
 
 int gcidx(void *h){
+	hannoy idx = NULL;
 	TRACE("gc annoy index begin: %p\n",h);
-	hannoy idx = (hannoy)h;
+	idx = (hannoy)h;
 	DestroyAnnoyIndex(idx);
 	TRACE("gc annoy index: %x\n", idx);
 	return 0;
 }
 
 void _dumpvec(char *caption, double vec[], int dimension){
+	int i;
 	printf("=== dump vector: %s ===\n", caption);
-	for (int i=0; i<dimension; i++){
+	for (i=0; i<dimension; i++){
 		printf("%.15f, ", vec[i]);
 		if ((i+1)%8 == 0)
 			printf("\n");
@@ -158,8 +160,8 @@ CREATE FUNCTION ANNOY_CREATESYSADM.LOADSP_GET() RETURNS int;
 	
 this udf is only for loading sp library when starting db.
 */
-#ifdef DB_PCWIN
-__declspec(dllexport)
+#if defined(WIN32) || defined(_WIN64)
+_declspec(dllexport)
 #endif
 int  LOADSP_GET(int nArg, VAL args[])
 {

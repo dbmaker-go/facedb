@@ -38,8 +38,9 @@ static void dvec2jvec(double dvec[], int nvec, char *obuf)
 }
 
 void gcidx(void *h, size_t dlen){
+	hannoy idx = NULL;
 	TRACE("gc annoy index begin: %p, %d\n",h, dlen);
-	hannoy idx = (hannoy)(*(void **)h);
+	idx = (hannoy)(*(void **)h);
 	DestroyAnnoyIndex(idx);
 	TRACE("gc annoy index: %x\n", idx);
 }
@@ -136,8 +137,8 @@ CREATE FUNCTION ANNOY_CREATESYSADM.LOADSP_GETALL() RETURNS int;
 	
 this udf is only for loading sp library when starting db.
 */
-#ifdef DB_PCWIN
-__declspec(dllexport)
+#if defined(WIN32) || defined(_WIN64)
+_declspec(dllexport)
 #endif
 int  LOADSP_GETALL(int nArg, VAL args[])
 {
