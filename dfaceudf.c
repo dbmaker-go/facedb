@@ -12,8 +12,8 @@
 # define TRACE
 #endif
 
-int  GETFACEVECTOR(int nArg, VAL args[]);
-int  GETFACEVECTOR2(int nArg, VAL args[]);
+//int  GETFACEVECTOR(int nArg, VAL args[]);
+//int  GETFACEVECTOR2(int nArg, VAL args[]);
 
 #define faceshape DFACE_SHAPE68
 #define cvdface "dface"

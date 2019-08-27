@@ -16,6 +16,13 @@ cl /c annoy_getall.c /I include
 link /DLL /OUT:ANNOY_GETALLSYSADM.DLL annoy_getall.obj lib/cannoy.lib lib/dmudf.lib
 
 # udf
-cl /c dfaceudf.c /I include /D DEBUG /D _DEBUG /Zi /D WIN32 /D WINDOWS  /MDd /Od
-link /DLL dfaceudf.obj lib/dface.lib lib/dmudf.lib /PDB:dfaceudf.pdb /DEBUG
+cl /c dfaceudf.c /I include
+link /DLL dfaceudf.obj lib/dface.lib lib/dmudf.lib
+
+# build with trace
+cl /c dfaceudf.c /D DEBUG
+
+# build debug version
+cl /c dfaceudf.c /D DEBUG /D _DEBUG /Zi
+link /DLL /DEBUG dfaceudf.obj
 
