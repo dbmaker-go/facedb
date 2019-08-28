@@ -70,12 +70,25 @@ func dbInsFace(name string, img []byte) (p Person, oerr error) {
 		return Person{}, err
 	}
 	//defer db.Close()
+
+	var tx *sql.Tx
+	tx, err = db.Begin()
+	if err != nil {
+		return Person{}, err
+	}
+	var hasCommit bool = false
+	defer func() {
+		if !hasCommit {
+			tx.Rollback()
+		}
+	}()
+
 	sql := "insert into faces(name, photo) values(?,?)"
-	if rs, err := db.Exec(sql, name, img); err != nil {
+	if rs, err := tx.Exec(sql, name, img); err != nil {
 		return Person{}, err
 	} else if nins, _ := rs.RowsAffected(); nins > 0 {
 		sql = "select LAST_SERIAL from SYSCONINFO"
-		if rows, err := db.Query(sql); err != nil {
+		if rows, err := tx.Query(sql); err != nil {
 			return Person{}, err
 		} else {
 			defer rows.Close()
@@ -86,11 +99,14 @@ func dbInsFace(name string, img []byte) (p Person, oerr error) {
 				// update index
 				dbUpdateAnnoyIdx()
 
+				tx.Commit()
 				return p, nil
 			}
+			tx.Commit()
 			return Person{}, nil
 		}
 	}
+	tx.Commit()
 	return Person{}, nil
 }
 
