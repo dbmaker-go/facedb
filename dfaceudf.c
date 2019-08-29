@@ -23,7 +23,7 @@
 #if defined(WIN32) || defined(_WIN64)
 _declspec(dllexport)
 #endif
-void gcCloseDface(void *h, size_t dlen){
+void gcCloseDface(void *h, i63 dlen){
 	dface dh = NULL;
 	TRACE("gc close dface begin: %p, %d\n",h, dlen);
 	dh = (dface)(*(void **)h);
@@ -39,7 +39,7 @@ static dface getDfaceHanle(VAL args[]){
 	dface dh = NULL;
 	time_t t1,t2;
 	
-	if (rc = udfGetCobj(args, cvdface, &dh, sizeof(dh))){
+	if (rc = udfGetCobj(args, cvdface, &dh, (i63)sizeof(dh))){
 		dh = NULL;
 		TRACE("get dface handle from cv fail: %d\n", rc);
 	} else {
@@ -57,7 +57,7 @@ static dface getDfaceHanle(VAL args[]){
 	t2 = time(0);
 	TRACE("open dface cost %f seconds\n", difftime(t2,t1));
 	
-	if (rc = udfSetCobj(args, cvdface, &dh, sizeof(dh), gcCloseDface, NULL, NULL)){
+	if (rc = udfSetCobj(args, cvdface, &dh, (i63)sizeof(dh), gcCloseDface, NULL, NULL)){
 		TRACE("save dface handle into cv error. %d\n", rc);
 		CloseDface(dh);
 		return NULL;

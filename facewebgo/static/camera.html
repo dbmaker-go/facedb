@@ -32,6 +32,7 @@
 	<tr> <td id="colButton" width="480" align="center">
 			<button id="btnstart" type="button">开始识别</button>
 			<button id="btnReg" type="button">拍照</button> 
+			<button id="btnShowAll" type="button">显示所有</button> 
 			<br>
 			<button id="btnSmall" type="button">小</button>
 			<button id="btnMiddle" type="button">中</button>
@@ -80,6 +81,10 @@
 			var btime = new Date();
 			
 			//console.log(navigator.userAgent)
+			
+			$("#btnShowAll").click(function(){
+				window.open("/allfaces", "_blank");
+			});
 			
 			function setVideoSize(){
 				w = 480;
@@ -321,7 +326,7 @@
 							elapse = (etime - btime)/1000
 							lblstatus.innerText = "识别成功,耗时" + elapse + "秒，五秒后再次识别..."
 							recogimg.src = "/getphoto?id=" +　result.data.faceid;
-							recogtxt.innerText = "您好," + result.data.name + ", distance=" + result.data.dis;
+							recogtxt.innerText = "您好," + result.data.name + ", id=" + result.data.faceid + ", distance=" + result.data.dis;
 						} else if (result.code == 102) {
 							lblstatus.innerText  = "未识别, 五秒后再次识别..."
 							//recogtxt.innerText = "抱歉，我不认识您~"

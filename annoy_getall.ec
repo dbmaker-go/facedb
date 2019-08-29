@@ -37,10 +37,10 @@ static void dvec2jvec(double dvec[], int nvec, char *obuf)
 	return;
 }
 
-int gcidx(void *h){
+int gcidx(void *data, i63 dlen){
 	hannoy idx = NULL;
-	TRACE("gc annoy index begin: %p\n",h);
-	idx = (hannoy)h;
+	TRACE("gc annoy index begin: %p, %d\n", data, dlen);
+	idx = (hannoy)(*(void **)data);
 	DestroyAnnoyIndex(idx);
 	TRACE("gc annoy index: %x\n", idx);
 	return 0;
@@ -78,35 +78,18 @@ $ create procedure annoy_getall(
 	dbdir[dbdirlen] = 0;
 	
 	sprintf(aidxname, "%s%c%s_%s.tree", dbdir, PATHSEP, tbname, idxname);
-	if ((idx1 = (hannoy)utcv_get(hdbc, aidxname)) == NULL){
-   		idx1 = NewAnnoyIndexEuclidean(dimension);
-   		AnnoyLoad(idx1, aidxname);
-   		i = AnnoyGetNItems(idx1);
-   		TRACE("load %s ok: %d items\n", idxname, i);
-   		
-   		utcv_set(hdbc, aidxname, (void *)idx1, gcidx, NULL);
-   		TRACE("save idx1 handle into cv: %x\n", idx1);
-	} else {
-		TRACE("get idx1 handle from cv: %x\n", idx1);
-   		i = AnnoyGetNItems(idx1);
-   		TRACE("idx1 has %d items\n", i);
-	}
+
+	idx1 = NewAnnoyIndexEuclidean(dimension);
+	AnnoyLoad(idx1, aidxname);
+	i = AnnoyGetNItems(idx1);
+	TRACE("load %s ok: %d items\n", idxname, i);
    
 	sprintf(aidxname, "%s%c%s_%s_oid.tree", dbdir, PATHSEP, tbname, idxname);
-	if ((idx2 = (hannoy)utcv_get(hdbc, aidxname)) == NULL){
-   		idx2 = NewAnnoyIndexEuclidean(2);
-   		AnnoyLoad(idx2, aidxname);
-   		i = AnnoyGetNItems(idx2);
-   		TRACE("load %s_oid ok: %d items\n", idxname, i);
-   		
-   		utcv_set(hdbc, aidxname, (void *)idx2, gcidx, NULL);
-   		TRACE("save idx2 handle into cv: %x\n", idx2);
-	} else {
-		TRACE("get idx2 handle from cv: %x\n", idx2);
-   		i = AnnoyGetNItems(idx2);
-   		TRACE("idx2 has %d items\n", i);
-	}
 
+	idx2 = NewAnnoyIndexEuclidean(2);
+	AnnoyLoad(idx2, aidxname);
+	i = AnnoyGetNItems(idx2);
+	TRACE("load %s_oid ok: %d items\n", idxname, i);
 		
 	$ drop table if exists tmpvec;
 	$ create temp table tmpvec(orid bigint, ovec char(4000));
@@ -122,8 +105,8 @@ $ create procedure annoy_getall(
 		$ insert into tmpvec values(:rid, :jvec :jveclen);
 	}
      
-	//DestroyAnnoyIndex(idx1);
-	//DestroyAnnoyIndex(idx2);
+	DestroyAnnoyIndex(idx1);
+	DestroyAnnoyIndex(idx2);
    
    $ returns select orid, ovec from tmpvec into :orid,:ovec;
    

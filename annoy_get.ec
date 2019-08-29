@@ -17,12 +17,18 @@
 # define PATHSEP '/'
 #endif
 
-int gcidx(void *h){
+#ifdef CACHEANNOY
+int cacheAnnoy = 1;
+#else
+int cacheAnnoy = 0;
+#endif
+
+int gcidx(void *data, i63 dlen){
 	hannoy idx = NULL;
-	TRACE("gc annoy index begin: %p\n",h);
-	idx = (hannoy)h;
+	TRACE("gc annoy index begin: %p, %d\n", data, dlen);
+	idx = (hannoy)(*(void **)data);
 	DestroyAnnoyIndex(idx);
-	TRACE("gc annoy index: %x\n", idx);
+	TRACE("gc annoy index end: %x\n", idx);
 	return 0;
 }
 
@@ -35,6 +41,52 @@ void _dumpvec(char *caption, double vec[], int dimension){
 			printf("\n");
 	}
 	printf("\n");
+}
+
+int loadAnnoyIndex(void *hdbc, char *aidxname, int dimension, hannoy *oidx)
+{
+	int rc = 0;
+	int i;
+	hannoy idx1 = NULL;
+	
+	if (!cacheAnnoy) {
+		idx1 = NewAnnoyIndexEuclidean(dimension);
+   		AnnoyLoad(idx1, aidxname);
+   		i = AnnoyGetNItems(idx1);
+   		TRACE("load %s ok: %d items\n", aidxname, i);
+   		*oidx = idx1;
+   		return rc;
+	}
+	
+	if (rc= spGetCobj(hdbc, aidxname, &idx1, (i63)sizeof(idx1))){
+		rc = 0;
+   		idx1 = NewAnnoyIndexEuclidean(dimension);
+   		AnnoyLoad(idx1, aidxname);
+   		i = AnnoyGetNItems(idx1);
+   		TRACE("load %s ok: %d items\n", aidxname, i);
+   		
+   		if (rc = spSetCobj(hdbc, aidxname, (void *)idx1, (i63)sizeof(idx1), gcidx, NULL, NULL)){
+   			rc = 0;
+   			TRACE("save idx handle of %s fail: %d\n", aidxname, rc);
+   		} else {
+   			TRACE("save idx handle of %s: %x\n", aidxname, idx1);
+   		}
+	} else {
+		TRACE("get idx1 handle from cv: %x\n", idx1);
+   		i = AnnoyGetNItems(idx1);
+   		TRACE("idx1 has %d items\n", i);
+	}
+	
+	*oidx = idx1;
+	return rc;
+}
+
+int unloadAnnoyIndex(hannoy idx)
+{
+	if (!cacheAnnoy){
+		DestroyAnnoyIndex(idx);
+	}
+	return 0;
 }
 
 $ create procedure annoy_get(
@@ -71,34 +123,10 @@ $ create procedure annoy_get(
 	dbdir[dbdirlen] = 0;
 
 	sprintf(aidxname, "%s%c%s_%s.tree", dbdir, PATHSEP, tbname, idxname);
-	if ((idx1 = (hannoy)utcv_get(hdbc, aidxname)) == NULL){
-   		idx1 = NewAnnoyIndexEuclidean(dimension);
-   		AnnoyLoad(idx1, aidxname);
-   		i = AnnoyGetNItems(idx1);
-   		TRACE("load %s ok: %d items\n", idxname, i);
-   		
-   		utcv_set(hdbc, aidxname, (void *)idx1, gcidx, NULL);
-   		TRACE("save idx1 handle into cv: %x\n", idx1);
-	} else {
-		TRACE("get idx1 handle from cv: %x\n", idx1);
-   		i = AnnoyGetNItems(idx1);
-   		TRACE("idx1 has %d items\n", i);
-	}
+	loadAnnoyIndex(hdbc, aidxname, dimension, &idx1);
    
 	sprintf(aidxname, "%s%c%s_%s_oid.tree", dbdir, PATHSEP, tbname, idxname);
-	if ((idx2 = (hannoy)utcv_get(hdbc, aidxname)) == NULL){
-   		idx2 = NewAnnoyIndexEuclidean(2);
-   		AnnoyLoad(idx2, aidxname);
-   		i = AnnoyGetNItems(idx2);
-   		TRACE("load %s_oid ok: %d items\n", idxname, i);
-   		
-   		utcv_set(hdbc, aidxname, (void *)idx2, gcidx, NULL);
-   		TRACE("save idx2 handle into cv: %x\n", idx2);
-	} else {
-		TRACE("get idx2 handle from cv: %x\n", idx2);
-   		i = AnnoyGetNItems(idx2);
-   		TRACE("idx2 has %d items\n", i);
-	}
+	loadAnnoyIndex(hdbc, aidxname, 2, &idx2);
 
 	idary = (int *)malloc(nItem * sizeof(int));
 	if (idary == 0) {
@@ -141,8 +169,8 @@ $ create procedure annoy_get(
 		TRACE("insert id: %ld, %f\n", rid, dist);
 	}
      
-	//DestroyAnnoyIndex(idx1);
-	//DestroyAnnoyIndex(idx2);
+	unloadAnnoyIndex(idx1);
+	unloadAnnoyIndex(idx2);
    
    $ returns select rid,distance from tmprid into :orid,:odist;
 

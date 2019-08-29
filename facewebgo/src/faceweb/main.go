@@ -17,6 +17,7 @@ var faceserver string = "127.0.0.1:9999"
 var dbsvadr string = "127.0.0.1"
 var dbptnum string = "20001"
 var dbname string = "FACEDB"
+var dbMaxConn int = 5
 
 func main() {
 	defer func() {
@@ -33,6 +34,7 @@ func main() {
 	flag.StringVar(&dbsvadr, "dbsvadr", dbsvadr, "db_svadr")
 	flag.StringVar(&dbptnum, "dbptnum", dbptnum, "db_ptnum")
 	flag.StringVar(&dbname, "dbname", dbname, "facedb name")
+	flag.IntVar(&dbMaxConn, "dbmaxc", dbMaxConn, "max db connections")
 	flag.Parse()
 
 	if wroot == "" {

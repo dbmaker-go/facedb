@@ -23,6 +23,7 @@ func dbOpen() (*sql.DB, error) {
 	if db, err := sql.Open("dbmaker", cnstr); err != nil {
 		return nil, err
 	} else {
+		db.SetMaxOpenConns(dbMaxConn)
 		mydb = db
 	}
 	return mydb, nil
