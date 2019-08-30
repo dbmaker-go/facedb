@@ -16,14 +16,23 @@ cd cwrap
 g++ -shared -fPIC -o libcannoy.so cannoy.c
 ```
 
-here is the linux 64bit binary: https://github.com/dbmaker-go/annoy/raw/master/cwrap/bin/linux_x64/libcannoy.so
+here are compiled binaries for linux x64 and windows x64:
+https://github.com/dbmaker-go/annoy/raw/master/cwrap/bin/linux_x64/libcannoy.so
+https://github.com/dbmaker-go/annoy/raw/master/cwrap/bin/windows_x64/cannoy.dll
+https://github.com/dbmaker-go/annoy/raw/master/cwrap/bin/windows_x64/cannoy.lib
 
 for more detail, refer to https://github.com/dbmaker-go/annoy/tree/master/cwrap.
 
 #### 1.2 Install cannoy to dbmaker installation path
 ```
+// linux:
 cp libcannoy.so /home/dbmaker/5.4/lib/so/
 cp cannoy.h /home/dbmaker/5.4/include/
+
+// windows:
+cp cannoy.h   C:\DBMaker\5.4\include
+cp cannly.lib C:\DBMaker\5.4\lib
+cp cannoy.dll C:\DBMaker\5.4\bin
 ```
 
 ### 2. Install dface to dbmaker installation path
@@ -36,14 +45,24 @@ g++ -std=c++11 -O3 dface.cpp ../dlib/all/source.cpp -I. -I..  -shared -fPIC \
   -o libdface.so -ljpeg -lpthread -lpng \
   -DDLIB_PNG_SUPPORT=1 -DDLIB_JPEG_SUPPORT=1 -DDLIB_NO_GUI_SUPPORT=1
 ```
-here is the linux x64 binary: https://github.com/dbmaker-go/dlib/raw/master/dface/bin/linux_x64/libdface.so
+
+here are compiled binaries for linux x64 and windows x64:
+https://github.com/dbmaker-go/dlib/raw/master/dface/bin/linux_x64/libdface.so
+https://github.com/dbmaker-go/dlib/raw/master/dface/bin/windows_x64/dface.dll
+https://github.com/dbmaker-go/dlib/raw/master/dface/bin/windows_x64/dface.lib
 
 for more detail, refer to https://github.com/dbmaker-go/dlib/tree/master/dface.
 
 #### 2.2 install dface to dbmaker installation path
 ```
+// linux:
 cp libdface.so /home/dbmaker/5.4/lib/so
 cp dface.h /home/dbmaker/5.4/include
+
+// windows:
+cp dface.h   C:\DBMaker\5.4\include
+cp dface.dll C:\DBMaker\5.4\lib
+cp dface.lib C:\DBMaker\5.4\bin
 ```
 
 #### 2.3 install dface modle files to dbmaker installation path
@@ -55,7 +74,7 @@ http://dlib.net/files/shape_predictor_5_face_landmarks.dat.bz2
 http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
 http://dlib.net/files/dlib_face_recognition_resnet_model_v1.dat.bz2
 ```
-then unzip them to /home/dbmaker/5.4/
+then unzip them to /home/dbmaker/5.4/ or C:\DBMaker\5.4\
 
 ### 3. create a database FACEDB:
 

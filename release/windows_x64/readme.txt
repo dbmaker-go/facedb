@@ -7,7 +7,7 @@ https://www.microsoft.com/en-us/download/details.aspx?id=52685
 
 2. deploy dll
 
-support DB_SPDIR = DB_LBDIR = DB_DBDIR.
+assume DB_SPDIR = DB_LBDIR = DB_DBDIR.
 unzip dll.zip to DB_DBDIR.
 add DBDIR to %path% env variable.
 

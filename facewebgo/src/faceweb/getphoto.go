@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strconv"
 )
 
@@ -54,7 +55,8 @@ func showFaces(w http.ResponseWriter, req *http.Request) {
 		replyErr(w, msg)
 		return
 	} else {
-		if t, err := template.ParseFiles("static/test/allfaces.html"); err != nil {
+		fn := filepath.Join(webroot, "static/test/allfaces.html")
+		if t, err := template.ParseFiles(fn); err != nil {
 			replyErr(w, err.Error())
 			return
 		} else {
